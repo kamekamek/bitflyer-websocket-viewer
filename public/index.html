@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BitFlyer BTC/JPY リアルタイム価格</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .price-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .price {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .price-change {
+            font-size: 0.5em;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .price-up {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .price-down {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .label {
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .timestamp {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .value {
+            font-size: 1.2em;
+            color: #333;
+            margin-top: 5px;
+        }
+        .volume {
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="price-card">
+        <div class="label">BTC/JPY 現在価格</div>
+        <div class="price">
+            <span id="price">--</span>
+            <span id="price-change" class="price-change"></span>
+        </div>
+        <div class="grid">
+            <div class="info-box">
+                <div class="label">最良買い気配値</div>
+                <div class="value" id="best-bid">--</div>
+                <div class="value" id="best-bid-size">--</div>
+            </div>
+            <div class="info-box">
+                <div class="label">最良売り気配値</div>
+                <div class="value" id="best-ask">--</div>
+                <div class="value" id="best-ask-size">--</div>
+            </div>
+            <div class="info-box">
+                <div class="label">取引量（24時間）</div>
+                <div class="value volume" id="volume">--</div>
+            </div>
+            <div class="info-box">
+                <div class="label">取引所ステータス</div>
+                <div class="value" id="exchange-status">--</div>
+            </div>
+        </div>
+        <div class="timestamp" id="timestamp">--</div>
+    </div>
+
+    <script>
+        let lastPrice = null;
+        const ws = new WebSocket(`ws://${window.location.hostname}:3000`);
+        
+        function formatNumber(number) {
+            return new Intl.NumberFormat('ja-JP').format(number);
+        }
+
+        function formatBitcoin(number) {
+            return new Intl.NumberFormat('ja-JP', {
+                minimumFractionDigits: 8,
+                maximumFractionDigits: 8
+            }).format(number);
+        }
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.params && data.params.message) {
+                const ticker = data.params.message;
+                const currentPrice = ticker.ltp;
+                
+                // 価格の更新と変動表示
+                document.getElementById('price').textContent = formatNumber(currentPrice) + ' 円';
+                if (lastPrice !== null) {
+                    const priceChange = document.getElementById('price-change');
+                    if (currentPrice > lastPrice) {
+                        priceChange.textContent = '↑';
+                        priceChange.className = 'price-change price-up';
+                    } else if (currentPrice < lastPrice) {
+                        priceChange.textContent = '↓';
+                        priceChange.className = 'price-change price-down';
+                    }
+                }
+                lastPrice = currentPrice;
+
+                // その他の情報を更新
+                document.getElementById('best-bid').textContent = formatNumber(ticker.best_bid) + ' 円';
+                document.getElementById('best-bid-size').textContent = formatBitcoin(ticker.best_bid_size) + ' BTC';
+                document.getElementById('best-ask').textContent = formatNumber(ticker.best_ask) + ' 円';
+                document.getElementById('best-ask-size').textContent = formatBitcoin(ticker.best_ask_size) + ' BTC';
+                document.getElementById('volume').textContent = formatBitcoin(ticker.volume) + ' BTC';
+                document.getElementById('exchange-status').textContent = ticker.state;
+                document.getElementById('timestamp').textContent = 
+                    new Date(ticker.timestamp).toLocaleString('ja-JP');
+            }
+        };
+
+        ws.onclose = function() {
+            document.getElementById('price').textContent = '接続が切断されました';
+        };
+
+        ws.onerror = function() {
+            document.getElementById('price').textContent = 'エラーが発生しました';
+        };
+    </script>
+</body>
+</html> 
