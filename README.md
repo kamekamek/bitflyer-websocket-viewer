@@ -22,8 +22,8 @@
 1. リポジトリをクローン、もしくはダウンロードします：
 
 ```bash
-git clone [リポジトリURL]
-cd websocket_practice
+git clone https://github.com/kamekamek/bitflyer-websocket-viewer.git
+cd bitflyer-websocket-viewer
 ```
 
 2. 必要なパッケージをインストールします：
